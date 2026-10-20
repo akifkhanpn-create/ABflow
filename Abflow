@@ -1,0 +1,37 @@
+const express = require('express');
+const cors = require('cors');
+const ytdl = require('ytdl-core');
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+app.get('/getinfo', async (req, res) => {
+    const videoURL = req.query.url;
+    if (!videoURL || !ytdl.validateURL(videoURL)) {
+        return res.status(400).json({ error: 'Sahi YouTube link nahi hai!' });
+    }
+
+    try {
+        const info = await ytdl.getInfo(videoURL);
+        const title = info.videoDetails.title;
+        const thumbnail = info.videoDetails.thumbnails.pop().url;
+        
+        // Formats filter karna
+        const formats = ytdl.filterFormats(info.formats, 'videoandaudio');
+        
+        res.json({
+            title: title,
+            thumbnail: thumbnail,
+            formats: formats.map(f => ({
+                quality: f.qualityLabel,
+                url: f.url
+            }))
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Video fetch karne mein masla aaya.' });
+    }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
